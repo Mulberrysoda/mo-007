@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ใบรายงานการทำงานของเครื่องจักรกลช่วย</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#000; --line:#000;
+    --accent:#1f3fbf;            /* น้ำเงินขอบฟอร์ม */
+    --toolbar-bg:#1f2937;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#e5e7eb;
+    font-family:'Sarabun','TH Sarabun New',Tahoma,'Segoe UI',sans-serif;color:var(--ink);}
+
+  /* ================= Toolbar (หน้าจอเท่านั้น) ================= */
+  .toolbar{position:sticky;top:0;z-index:50;background:var(--toolbar-bg);color:#fff;
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 16px;
+    box-shadow:0 2px 8px rgba(0,0,0,.25);}
+  .toolbar h1{font-size:15px;margin:0 auto 0 0;font-weight:600;}
+  .toolbar button, .toolbar select{font-family:inherit;font-size:14px;cursor:pointer;
+    border:none;border-radius:6px;padding:8px 14px;color:#fff;font-weight:600;}
+  .toolbar select{background:#374151;}
+  .btn-b{background:#2563eb;} .btn-b:hover{background:#1d4ed8;}
+  .btn-g{background:#059669;} .btn-g:hover{background:#047857;}
+  .btn-r{background:#dc2626;} .btn-r:hover{background:#b91c1c;}
+  .btn-y{background:#d97706;} .btn-y:hover{background:#b45309;}
+  .btn-t{background:#0891b2;} .btn-t:hover{background:#0e7490;}
+  .btn-ghost{background:#4b5563;} .btn-ghost:hover{background:#374151;}
+  .hint{width:100%;font-size:12px;color:#cbd5e1;padding:0 16px 6px;}
+
+  /* สลับโหมด */
+  .modes{display:flex;gap:6px;background:#111827;border-radius:8px;padding:3px;}
+  .modes button{background:transparent;padding:6px 12px;font-size:13px;opacity:.7;}
+  .modes button.active{background:#2563eb;opacity:1;}
+
+  /* ================= กระดาษ A4 ================= */
+  /* ขอบที่ปริ๊นเตอร์ส่วนใหญ่พิมพ์ไม่ได้ ≈ 4–6 มม. → ใช้ขอบพิมพ์ 7 มม. เพื่อความปลอดภัย
+     พื้นที่พิมพ์จริง = 210 - 2*7 = 196 มม. ฟอร์มจะกว้างเต็มพื้นที่นี้ */
+  .sheet{position:relative;background:#fff;width:210mm;min-height:297mm;margin:16px auto;
+    padding:7mm 7mm 12mm;border:1px solid #bbb;box-shadow:0 2px 12px rgba(0,0,0,.2);}
+  .doc-header{margin-bottom:4px;}
+  .doc-header img{display:block;width:100%;height:auto;max-height:62px;object-fit:contain;object-position:left center;}
+  .form-body{outline:2px solid var(--accent);padding:5px;}
+  .doc-ctrl{position:absolute;right:7mm;bottom:5mm;font-size:11px;color:#000;}
+
+  /* ================= อินพุต ================= */
+  input[type=text], input[type=date]{font-family:inherit;font-size:12.5px;border:none;outline:none;
+    width:100%;background:transparent;padding:1px 3px;color:#0b3ea8;}
+  input:focus, textarea:focus{background:#eef4ff;}
+  textarea{font-family:inherit;font-size:12.5px;border:none;outline:none;resize:none;width:100%;
+    height:100%;background:transparent;padding:1px 3px;color:#0b3ea8;overflow:hidden;}
+  table{border-collapse:collapse;width:100%;}
+  td,th{border:1px solid var(--line);padding:0;vertical-align:middle;}
+  .noborder,.noborder td{border:none;}
+
+  .title{text-align:center;font-size:20px;font-weight:700;margin:2px 0 8px;}
+  .lbl{font-size:12.5px;padding:2px 5px;white-space:nowrap;}
+  .lbl-c{font-size:12.5px;text-align:center;font-weight:600;}
+  .center{text-align:center;} .small{font-size:11px;}
+
+  .hdr{display:grid;grid-template-columns:1.05fr 1.05fr 0.9fr;gap:8px;align-items:start;margin-bottom:6px;}
+  .hdr .box td{height:23px;}
+  .digit td{height:22px;text-align:center;}
+  .digit input{text-align:center;}
+  input.calc{background:#eef2f7;color:#0b3ea8;font-weight:600;}
+  input.calc:focus{background:#eef2f7;}
+  .opt{font-size:12.5px;padding:2px;white-space:nowrap;}
+  .opt label{cursor:pointer;}
+
+  .sec-title{font-size:12.5px;font-weight:700;margin:7px 0 3px;text-decoration:underline;}
+  .check{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px 14px;font-size:12px;}
+  .check label{display:flex;gap:6px;align-items:flex-start;cursor:pointer;line-height:1.28;}
+  input[type=checkbox]{width:14px;height:14px;margin:1px 0 0;flex:none;accent-color:#0b3ea8;}
+  .codes{display:grid;grid-template-columns:repeat(3,1fr);gap:3px 14px;font-size:12px;margin-top:4px;}
+  .codes label{display:flex;gap:6px;align-items:center;cursor:pointer;}
+
+  .legend{display:flex;align-items:center;gap:22px;font-size:12.5px;
+    border:1px solid var(--line);border-bottom:none;padding:3px 8px;margin-top:8px;}
+  .legend b{font-weight:700;} .legend .sym{font-weight:700;}
+
+  .log th{font-size:12px;font-weight:600;padding:2px;}
+  .log td{height:24px;}
+  .log .t{font-size:11.5px;text-align:center;white-space:nowrap;padding:0 4px;width:13%;}
+  .log .op{width:13%;} .log .op input{text-align:center;}
+
+  .fuel th{font-size:12px;font-weight:600;padding:2px;}
+  .fuel td{height:23px;}
+
+  .sign{display:grid;grid-template-columns:1fr 1fr;gap:8px 26px;margin-top:16px;font-size:13px;}
+  .sign .row{display:flex;align-items:flex-end;gap:6px;}
+  .sign .row span{white-space:nowrap;}
+  .sign .row .ln{flex:1;border-bottom:1px dotted #000;min-height:19px;}
+  .sign .row .ln input{text-align:center;}
+
+  /* ช่องเซ็นชื่อบนหน้าจอ (รองรับสัมผัสมือถือ) */
+  .sign .sigrow{align-items:flex-start;}
+  .sigcell{flex:1;}
+  .sigpad{width:100%;height:66px;border:1px solid #9aa4b2;border-radius:5px;background:#fff;
+    display:block;touch-action:none;cursor:crosshair;}
+  .sigtools{display:flex;justify-content:space-between;align-items:center;margin-top:2px;}
+  .sigtools .hintbtn{font-size:10.5px;color:#6b7280;}
+  .sigtools button{font-size:11px;padding:2px 10px;border:1px solid #cbd5e1;border-radius:5px;
+    background:#f3f4f6;color:#374151;cursor:pointer;}
+  .sigtools button:hover{background:#e5e7eb;}
+  body.locked .sigpad{pointer-events:none;background:transparent;border-color:transparent;}
+
+  /* โหมดล็อก (ดูตัวอย่าง / เสมียน) — แก้ไขไม่ได้แต่ยังพิมพ์ได้ */
+  body.locked .form-body input, body.locked .form-body textarea{pointer-events:none;background:transparent;}
+  body.locked .form-body input, body.locked .form-body textarea{color:#0b3ea8;}
+
+  /* แถบแจ้งเตือน/สถานะ */
+  #status{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100;
+    padding:11px 22px;border-radius:8px;color:#fff;font-size:14px;box-shadow:0 3px 12px rgba(0,0,0,.3);display:none;}
+
+  /* ================= โหมดพิมพ์ ================= */
+  @page{size:A4 portrait;margin:7mm;}
+  @media print{
+    html,body{background:#fff;}
+    .toolbar,#status{display:none !important;}
+    .sheet{width:auto;min-height:auto;margin:0;padding:0 0 8mm;border:none;box-shadow:none;}
+    .doc-ctrl{position:fixed;right:0;bottom:2mm;}
+    input,textarea{color:#000 !important;}
+    input:focus,textarea:focus{background:transparent !important;}
+    input.calc{background:transparent !important;font-weight:600;}
+    .sigpad{border:none;border-bottom:1px dotted #000;border-radius:0;height:60px;}
+    .sigtools{display:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>ใบรายงานการทำงานของเครื่องจักรกลช่วย</h1>
+
+  <div class="modes">
+    <button id="mDriver" class="active" onclick="setMode('driver')">👷 พนักงานขับรถ</button>
+    <button id="mClerk" onclick="setMode('clerk')">🖨️ เสมียน (พิมพ์)</button>
+  </div>
+
+  <!-- ปุ่มโหมดพนักงานขับรถ -->
+  <span id="barDriver" style="display:flex;gap:10px;align-items:center;">
+    <button class="btn-t" onclick="saveDraftManual()">💾 บันทึกร่าง</button>
+    <button class="btn-ghost" onclick="loadDrafts()">📥 โหลดร่าง</button>
+    <select id="draftSelect" onchange="openDraft()" style="display:none;"><option>— โหลดร่างก่อน —</option></select>
+    <button class="btn-y" onclick="preview()">👁️ ดูตัวอย่าง</button>
+    <button class="btn-g" onclick="submitReport()">📤 ส่งเข้าระบบ</button>
+    <button class="btn-b" onclick="window.print()">🖨️ พิมพ์</button>
+    <button class="btn-ghost" onclick="backToEdit()">✏️ แก้ไข</button>
+    <button class="btn-r" onclick="clearData()">🗑️ ล้าง</button>
+  </span>
+
+  <!-- ปุ่มโหมดเสมียน -->
+  <span id="barClerk" style="display:none;gap:10px;align-items:center;">
+    <button class="btn-ghost" onclick="loadList()">🔄 โหลดรายการ</button>
+    <select id="reportSelect" onchange="loadSelected()"><option>— โหลดรายการก่อน —</option></select>
+    <button class="btn-b" onclick="window.print()">🖨️ พิมพ์</button>
+  </span>
+
+  <div class="hint" id="hintDriver">กรอกได้หลายรอบ → กด “💾 บันทึกร่าง” เก็บขึ้น Google Sheet (เปิดต่อจากเครื่องอื่นด้วย “📥 โหลดร่าง”) → พอเลิกงานค่อยกด “📤 ส่งเข้าระบบ” &nbsp;•&nbsp; <span id="savedInfo" style="color:#6ee7b7;"></span></div>
+  <div class="hint" id="hintClerk" style="display:none;">กด “โหลดรายการ” → เลือกรายงานที่ต้องการ → กด “พิมพ์” (ตั้งกระดาษ A4 แนวตั้ง)</div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="doc-header">
+    <img src="logo.png" alt="Italian-Thai Development - J.2411 Mae Moh Mine Phase 9">
+  </div>
+  <div class="form-body">
+  <div class="title">ใบรายงานการทำงานของเครื่องจักรกลช่วย</div>
+
+  <!-- ================= HEADER ================= -->
+  <div class="hdr">
+    <div>
+      <table class="box">
+        <tr><td class="lbl" style="border:none"></td><td class="lbl-c">No.</td><td class="lbl-c">Code</td></tr>
+        <tr><td class="lbl">เครื่องจักร</td><td><input type="text" data-k="mc_no"></td><td><input type="text" data-k="mc_code"></td></tr>
+        <tr><td class="lbl" style="border:none"></td><td class="lbl-c">เลขประจำตัว</td><td class="lbl-c">เวลาทำงาน</td></tr>
+        <tr><td class="lbl">ชื่อผู้ขับ</td><td><input type="text" data-k="drv_id"></td><td><input type="text" data-k="drv_time"></td></tr>
+      </table>
+    </div>
+    <div>
+      <table class="digit">
+        <tr><td class="lbl" style="border:none"></td><td class="lbl-c">SMU</td><td class="lbl-c">เลขกิโลเมตร</td></tr>
+        <tr><td class="lbl">เริ่มงาน</td><td><input type="text" data-k="smu_start"></td><td><input type="text" data-k="km_start"></td></tr>
+        <tr><td class="lbl">เลิกงาน</td><td><input type="text" data-k="smu_end"></td><td><input type="text" data-k="km_end"></td></tr>
+        <tr><td class="lbl">ใช้งาน</td>
+            <td><input type="text" data-k="smu_use" class="calc" readonly title="คำนวณอัตโนมัติ = เลิกงาน − เริ่มงาน"></td>
+            <td><input type="text" data-k="km_use" class="calc" readonly title="คำนวณอัตโนมัติ = เลิกงาน − เริ่มงาน"></td></tr>
+      </table>
+    </div>
+    <div>
+      <table class="noborder">
+        <tr><td class="lbl" style="text-align:right;width:40px">วันที่</td>
+            <td style="border:1px solid #000"><input type="date" data-k="date"></td></tr>
+      </table>
+      <table class="noborder" style="margin-top:8px">
+        <tr><td class="lbl" style="width:36px">กะ</td>
+            <td class="opt"><label><input type="radio" name="shift" value="กลางวัน" data-k="shift"> กลางวัน</label></td></tr>
+        <tr><td></td><td class="opt"><label><input type="radio" name="shift" value="กลางคืน" data-k="shift"> กลางคืน</label></td></tr>
+        <tr><td class="lbl" style="width:36px">งาน</td>
+            <td class="opt"><label><input type="radio" name="wtype" value="ดิน" data-k="wtype"> ดิน</label></td></tr>
+        <tr><td></td><td class="opt"><label><input type="radio" name="wtype" value="ถ่าน" data-k="wtype"> ถ่าน</label></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= รายการตรวจเช็ค ================= -->
+  <div class="sec-title">รายการตรวจเช็ค</div>
+  <div class="check">
+    <label><input type="checkbox" data-k="chk1"><span>1. สภาพโดยรอบของเครื่องจักร (การ์ดรอบคัน, ถังดับเพลิง)</span></label>
+    <label><input type="checkbox" data-k="chk4"><span>4. ตีนตะขาบ (ความตรึงแทรค)</span></label>
+    <label><input type="checkbox" data-k="chk7"><span>7. ระบบไฟแสงสว่าง (ไฟส่องสว่างรอบเครื่องจักร)</span></label>
+    <label><input type="checkbox" data-k="chk2"><span>2. ฟันบุ้งกี๋, ใบมีด (ฟัน, ระยะห่างของสลัก)</span></label>
+    <label><input type="checkbox" data-k="chk5"><span>5. ระบบไฟฟ้า (แตร, ไฟเลี้ยว, ไฟฉุกเฉิน, ไฟเบรค, ไฟถอย)</span></label>
+    <label><input type="checkbox" data-k="chk8"><span>8. เกจ์ความร้อน (ระดับน้ำมันต่างๆ, ระดับน้ำหล่อเย็น)</span></label>
+    <label><input type="checkbox" data-k="chk3"><span>3. รอยรั่วซึมของน้ำมัน (ระดับน้ำมันต่างๆ หัวสาย HYD. ทุกจุด)</span></label>
+    <label><input type="checkbox" data-k="chk6"><span>6. กรอง (สภาพกรองอากาศ)</span></label>
+    <label><input type="checkbox" data-k="chk9"><span>9. กำลังเครื่องจักร (รอบเดินเบา, รอบสูงเมื่อเหยียบคันเร่ง)</span></label>
+  </div>
+  <div class="codes">
+    <label><input type="checkbox" data-k="cd1"> งานดิน BWE (D1030)</label>
+    <label><input type="checkbox" data-k="cd2"> งานดิน SH &amp; MT (D2030)</label>
+    <label><input type="checkbox" data-k="cd3"> งานดิน ผรม.ช่วง (D3030)</label>
+    <label><input type="checkbox" data-k="cd5"> งานสายพาน Pit Support (D6030)</label>
+    <label><input type="checkbox" data-k="cd4"> งานถ่าน (D7030)</label>
+    <span></span>
+  </div>
+
+  <!-- ================= บันทึกการทำงาน ================= -->
+  <div class="legend">
+    <b>บันทึกการทำงาน</b>
+    <span><span class="sym">/</span> งานดิน</span>
+    <span><span class="sym">//</span> งานถ่าน</span>
+    <span><span class="sym">◯</span> รองาน</span>
+    <span><span class="sym">△</span> เสีย</span>
+  </div>
+  <table class="log">
+    <thead>
+      <tr><th colspan="2">เวลา</th><th rowspan="2" class="op">การทำงาน</th>
+          <th rowspan="2">รายละเอียดงาน / สาเหตุการหยุดงาน</th></tr>
+      <tr><th class="t">กะกลางวัน</th><th class="t">กะกลางคืน</th></tr>
+    </thead>
+    <tbody id="logBody"></tbody>
+  </table>
+
+  <!-- ================= รายการเติมน้ำมัน ================= -->
+  <table class="fuel" style="border-top:none">
+    <tr><td rowspan="3" style="width:28%" class="center"><b>รายการเติมน้ำมัน</b></td>
+      <th colspan="2">ครั้งที่ 1</th><th colspan="2">ครั้งที่ 2</th><th colspan="2">ครั้งที่ 3</th></tr>
+    <tr><th>เลข กม. / SMU</th><th>จำนวนลิตร</th><th>เลข กม. / SMU</th><th>จำนวนลิตร</th><th>เลข กม. / SMU</th><th>จำนวนลิตร</th></tr>
+    <tr><td><input type="text" data-k="f1_smu"></td><td><input type="text" data-k="f1_l"></td>
+        <td><input type="text" data-k="f2_smu"></td><td><input type="text" data-k="f2_l"></td>
+        <td><input type="text" data-k="f3_smu"></td><td><input type="text" data-k="f3_l"></td></tr>
+  </table>
+
+  <!-- ================= ลายเซ็น ================= -->
+  <div class="sign">
+    <div class="row sigrow">
+      <span>พนักงานขับรถ</span>
+      <div class="sigcell">
+        <canvas class="sigpad" id="sigDriver"></canvas>
+        <input type="hidden" data-k="sig_driver">
+        <div class="sigtools">
+          <span class="hintbtn">✍️ เซ็นด้วยนิ้วหรือปากกาบนหน้าจอ</span>
+          <button type="button" onclick="clearSig()">ล้างลายเซ็น</button>
+        </div>
+      </div>
+    </div>
+    <div class="row"><span>โฟร์แมน</span><span class="ln"><input type="text" data-k="sig_foreman"></span></div>
+    <div class="row"><span>นายช่างผู้ควบคุมงาน</span><span class="ln"><input type="text" data-k="sig_super"></span></div>
+    <div class="row"><span>นายช่างโครงการ</span><span class="ln"><input type="text" data-k="sig_project"></span></div>
+  </div>
+  </div><!-- /form-body -->
+
+  <div class="doc-ctrl">ITD-BU10-J2411-MO-FO-007 V.03</div>
+</div>
+
+<div id="status"></div>
+
+<script>
+  /* ============================================================
+     ตั้งค่า: วาง URL ของ Google Apps Script Web App ที่นี่
+     (ดูวิธีทำในไฟล์ README-setup.md)
+     ============================================================ */
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbw-Qv2LyGE34i4_ZRAghkVJmep-q0cm3HOi68EA7C-Vvrx2sihE03TLCKHEFVNZfzhV/exec"; // เช่น "https://script.google.com/macros/s/AKfycb.../exec"
+
+  /* ---------- รหัสรายงาน (ใช้ระบุแถวเดิมบน Google Sheet เพื่ออัปเดตซ้ำ) ---------- */
+  const ID_KEY='iso_report_id';
+  let currentId=localStorage.getItem(ID_KEY)||null;
+  function getId(){
+    if(!currentId){ currentId='R'+Date.now()+'-'+Math.random().toString(36).slice(2,7); }
+    localStorage.setItem(ID_KEY, currentId);
+    return currentId;
+  }
+  function resetId(){ currentId=null; localStorage.removeItem(ID_KEY); }
+
+  /* ---------- สร้างแถวตารางบันทึกการทำงาน 12 ชั่วโมง ---------- */
+  const dayTimes=["06.00 - 07.00","07.00 - 08.00","08.00 - 09.00","09.00 - 10.00","10.00 - 11.00","11.00 - 12.00","12.00 - 13.00","13.00 - 14.00","14.00 - 15.00","15.00 - 16.00","16.00 - 17.00","17.00 - 18.00"];
+  const nightTimes=["18.00 - 19.00","19.00 - 20.00","20.00 - 21.00","21.00 - 22.00","22.00 - 23.00","23.00 - 24.00","24.00 - 01.00","01.00 - 02.00","02.00 - 03.00","03.00 - 04.00","04.00 - 05.00","05.00 - 06.00"];
+  const body=document.getElementById('logBody');
+  for(let i=0;i<12;i++){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="t">${dayTimes[i]}</td><td class="t">${nightTimes[i]}</td>`+
+      `<td class="op"><input type="text" data-k="op${i}"></td><td><input type="text" data-k="dt${i}"></td>`;
+    body.appendChild(tr);
+  }
+
+  /* ---------- ช่องเซ็นชื่อ (รองรับสัมผัส/เมาส์/ปากกา) ---------- */
+  const sigCanvas=document.getElementById('sigDriver');
+  const sigHidden=document.querySelector('input[data-k="sig_driver"]');
+  const sctx=sigCanvas.getContext('2d');
+  let sdraw=false, slast=null;
+  function sigResize(){
+    const keep=sigHidden.value;
+    const ratio=window.devicePixelRatio||1;
+    const w=sigCanvas.clientWidth||400, h=sigCanvas.clientHeight||66;
+    sigCanvas.width=w*ratio; sigCanvas.height=h*ratio;
+    sctx.setTransform(ratio,0,0,ratio,0,0);
+    sctx.lineWidth=2; sctx.lineCap='round'; sctx.lineJoin='round'; sctx.strokeStyle='#0b2ea8';
+    if(keep) sigDraw(keep);
+  }
+  function sigPos(e){const r=sigCanvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
+  sigCanvas.addEventListener('pointerdown',e=>{sdraw=true;slast=sigPos(e);sigCanvas.setPointerCapture(e.pointerId);e.preventDefault();});
+  sigCanvas.addEventListener('pointermove',e=>{if(!sdraw)return;const p=sigPos(e);
+    sctx.beginPath();sctx.moveTo(slast.x,slast.y);sctx.lineTo(p.x,p.y);sctx.stroke();slast=p;e.preventDefault();});
+  function sigEnd(){if(!sdraw)return;sdraw=false;sigHidden.value=sigCanvas.toDataURL('image/png');saveDraft();}
+  sigCanvas.addEventListener('pointerup',sigEnd);
+  sigCanvas.addEventListener('pointerleave',sigEnd);
+  sigCanvas.addEventListener('pointercancel',sigEnd);
+  function sigDraw(dataUrl){const img=new Image();
+    img.onload=()=>{sctx.clearRect(0,0,sigCanvas.clientWidth,sigCanvas.clientHeight);
+      sctx.drawImage(img,0,0,sigCanvas.clientWidth,sigCanvas.clientHeight);};img.src=dataUrl;}
+  function sigLoad(d){ sigHidden.value=d||''; if(d){sigDraw(d);} else {sctx.clearRect(0,0,sigCanvas.width,sigCanvas.height);} }
+  function clearSig(){ sctx.clearRect(0,0,sigCanvas.width,sigCanvas.height); sigHidden.value=''; saveDraft(); }
+  window.addEventListener('resize',()=>setTimeout(sigResize,50));
+  setTimeout(sigResize,0);
+
+  /* ---------- คำนวณ "ใช้งาน" = เลิกงาน − เริ่มงาน ---------- */
+  const q=k=>document.querySelector('input[data-k="'+k+'"]');
+  function toNum(v){ const n=parseFloat(String(v==null?'':v).replace(/,/g,'').trim()); return n; }
+  function fmtNum(n){ return isFinite(n) ? (Math.round(n*100)/100).toLocaleString('en-US',{maximumFractionDigits:2}) : ''; }
+  function calcUse(){
+    q('smu_use').value = fmtNum(toNum(q('smu_end').value) - toNum(q('smu_start').value));
+    q('km_use').value  = fmtNum(toNum(q('km_end').value)  - toNum(q('km_start').value));
+  }
+
+  /* ---------- เก็บ/ใส่ค่า ---------- */
+  function collect(){
+    const data={};
+    document.querySelectorAll('[data-k]').forEach(el=>{
+      const k=el.dataset.k;
+      if(el.type==='checkbox') data[k]=el.checked;
+      else if(el.type==='radio'){ if(el.checked) data[k]=el.value; }
+      else data[k]=el.value;
+    });
+    return data;
+  }
+  function apply(data){
+    if(!data) return;
+    // เคลียร์ radio ก่อน
+    document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);
+    document.querySelectorAll('[data-k]').forEach(el=>{
+      const k=el.dataset.k;
+      if(!(k in data)) return;
+      if(el.type==='checkbox') el.checked=!!data[k];
+      else if(el.type==='radio') el.checked=(el.value===data[k]);
+      else el.value=data[k]||'';
+    });
+    setTimeout(()=>sigLoad(data['sig_driver']),0); // วาดลายเซ็นกลับลง canvas
+    calcUse(); // คำนวณช่องใช้งานใหม่ให้ตรงเสมอ
+  }
+
+  /* ---------- ร่างอัตโนมัติ + บันทึกเอง (localStorage) ---------- */
+  const KEY='iso_machine_report_draft';
+  const KEY_TS='iso_machine_report_draft_ts';
+  function saveDraft(){
+    localStorage.setItem(KEY, JSON.stringify(collect()));
+    const ts=new Date().toISOString();
+    localStorage.setItem(KEY_TS, ts);
+    updateSavedInfo(ts);
+  }
+  async function saveDraftManual(){
+    if(await serverSave('ร่าง'))
+      flash('บันทึกร่างขึ้นระบบแล้ว ✓ เปิดแก้ต่อจากเครื่องอื่นได้ (กด “โหลดร่าง”)','#0891b2');
+  }
+  function updateSavedInfo(ts){
+    const el=document.getElementById('savedInfo'); if(!el) return;
+    if(!ts){ el.textContent=''; return; }
+    const d=new Date(ts);
+    const t=d.toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    el.textContent='บันทึกล่าสุด: '+t;
+  }
+  // บันทึกอัตโนมัติทุกครั้งที่แก้ไข (กันข้อมูลหายระหว่างกรอกหลายรอบ)
+  document.addEventListener('input', (e)=>{
+    const k=e.target && e.target.dataset ? e.target.dataset.k : '';
+    if(['smu_start','smu_end','km_start','km_end'].includes(k)) calcUse();
+    if(mode==='driver' && !document.body.classList.contains('locked')) saveDraft();
+  });
+  document.addEventListener('change', (e)=>{ // ครอบคลุม checkbox/radio ทุกเบราว์เซอร์
+    if(mode==='driver' && !document.body.classList.contains('locked')) saveDraft();
+  });
+  // โหลดร่างที่ค้างไว้ + แสดงเวลาบันทึกล่าสุด
+  try{ apply(JSON.parse(localStorage.getItem(KEY))); }catch(e){}
+  updateSavedInfo(localStorage.getItem(KEY_TS));
+
+  function clearData(){
+    if(!confirm('ต้องการล้างข้อมูลทั้งหมดในฟอร์มหรือไม่?')) return;
+    localStorage.removeItem(KEY); localStorage.removeItem(KEY_TS); updateSavedInfo('');
+    document.querySelectorAll('[data-k]').forEach(el=>{
+      if(el.type==='checkbox'||el.type==='radio') el.checked=false; else el.value='';
+    });
+    clearSig();
+    resetId();
+    backToEdit();
+  }
+
+  /* ---------- ดูตัวอย่าง / กลับไปแก้ไข ---------- */
+  function preview(){ document.body.classList.add('locked'); window.scrollTo({top:0,behavior:'smooth'});
+    flash('โหมดดูตัวอย่าง — ตรวจสอบความถูกต้องแล้วกด “ส่งเข้าระบบ”','#d97706'); }
+  function backToEdit(){ document.body.classList.remove('locked'); }
+
+  /* ---------- สถานะ ---------- */
+  let statusTimer;
+  function flash(msg,color){
+    const d=document.getElementById('status');
+    d.textContent=msg; d.style.background=color||'#059669'; d.style.display='block';
+    clearTimeout(statusTimer); statusTimer=setTimeout(()=>d.style.display='none',3000);
+  }
+
+  /* ---------- บันทึก/ส่งขึ้น Google Sheet (upsert ด้วย id) ---------- */
+  async function serverSave(status){
+    saveDraft(); // สำรองในเครื่องเสมอ (กันเน็ตหลุด)
+    if(!GAS_URL){ flash('บันทึกในเครื่องแล้ว — ยังไม่ได้ตั้งค่า GAS_URL จึงไม่ขึ้นระบบ (ดู README-setup.md)','#d97706'); return false; }
+    flash(status==='ร่าง'?'กำลังบันทึกร่างขึ้นระบบ...':'กำลังส่งข้อมูล...','#2563eb');
+    try{
+      const res=await fetch(GAS_URL,{method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'save', status, id:getId(), data:collect()})});
+      const out=await res.json();
+      if(out && out.ok){ currentId=out.id; localStorage.setItem(ID_KEY,currentId); return true; }
+      flash('ไม่สำเร็จ: '+(out&&out.error||'unknown'),'#dc2626'); return false;
+    }catch(err){ flash('เชื่อมต่อไม่สำเร็จ: '+err.message+' (ข้อมูลยังเก็บในเครื่อง)','#dc2626'); return false; }
+  }
+
+  async function submitReport(){
+    const data=collect();
+    if(!data.date || !data.mc_no){
+      if(!confirm('ยังไม่ได้กรอก “วันที่” หรือ “เครื่องจักร No.” ต้องการส่งต่อหรือไม่?')) return;
+    }
+    if(!confirm('ยืนยันส่งรายงานเข้าระบบ? (หลังส่งแล้ว เสมียนจะเห็นและพิมพ์ได้)')) return;
+    if(await serverSave('ส่งแล้ว')){
+      flash('✓ ส่งเข้าระบบเรียบร้อย (สถานะ: ส่งแล้ว)','#059669');
+      localStorage.removeItem(KEY); localStorage.removeItem(KEY_TS); updateSavedInfo(''); resetId();
+    }
+  }
+
+  /* ---------- โหลดร่างที่ค้างไว้ (เปิดต่อข้ามเครื่อง) ---------- */
+  let drafts=[];
+  async function loadDrafts(){
+    if(!GAS_URL){ flash('ยังไม่ได้ตั้งค่า GAS_URL — ดู README-setup.md','#dc2626'); return; }
+    flash('กำลังโหลดร่าง...','#2563eb');
+    try{
+      const res=await fetch(GAS_URL+'?action=drafts');
+      drafts=await res.json();
+      const sel=document.getElementById('draftSelect');
+      sel.style.display='';
+      sel.innerHTML='<option value="">— เลือกร่าง ('+drafts.length+' รายการ) —</option>';
+      drafts.forEach((r,i)=>{
+        const d=r.data||{};
+        const label=(d.date||'-')+' | เครื่อง '+(d.mc_no||'-')+' | ผู้ขับ '+(d.drv_id||'-')+' | '+(d.shift||'');
+        sel.insertAdjacentHTML('beforeend','<option value="'+i+'">'+label+'</option>');
+      });
+      flash('พบร่าง '+drafts.length+' รายการ เลือกเพื่อแก้ต่อ','#059669');
+    }catch(err){ flash('โหลดไม่สำเร็จ: '+err.message,'#dc2626'); }
+  }
+  function openDraft(){
+    const i=document.getElementById('draftSelect').value; if(i==='') return;
+    const rec=drafts[i];
+    apply(rec.data);
+    currentId=rec.id; localStorage.setItem(ID_KEY,currentId);
+    saveDraft();
+    flash('เปิดร่างแล้ว — แก้ไขต่อได้เลย','#0891b2');
+  }
+
+  /* ---------- โหมดเสมียน: โหลดรายการ + พิมพ์ ---------- */
+  let records=[];
+  async function loadList(){
+    if(!GAS_URL){ flash('ยังไม่ได้ตั้งค่า GAS_URL — ดูวิธีในไฟล์ README-setup.md','#dc2626'); return; }
+    flash('กำลังโหลดรายการ...','#2563eb');
+    try{
+      const res=await fetch(GAS_URL+'?action=list');
+      records=await res.json();
+      const sel=document.getElementById('reportSelect');
+      sel.innerHTML='<option value="">— เลือกรายงาน ('+records.length+' รายการ) —</option>';
+      records.forEach((r,i)=>{
+        const d=r.data||{};
+        const label=(d.date||'-')+' | เครื่อง '+(d.mc_no||'-')+' | ผู้ขับ '+(d.drv_id||'-')+' | '+(d.shift||'');
+        sel.insertAdjacentHTML('beforeend','<option value="'+i+'">'+label+'</option>');
+      });
+      flash('โหลดแล้ว '+records.length+' รายการ','#059669');
+    }catch(err){ flash('โหลดไม่สำเร็จ: '+err.message,'#dc2626'); }
+  }
+  function loadSelected(){
+    const i=document.getElementById('reportSelect').value;
+    if(i==='') return;
+    apply(records[i].data);
+    document.body.classList.add('locked');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  /* ---------- สลับโหมด ---------- */
+  let mode='driver';
+  function setMode(m){
+    mode=m;
+    document.getElementById('mDriver').classList.toggle('active',m==='driver');
+    document.getElementById('mClerk').classList.toggle('active',m==='clerk');
+    document.getElementById('barDriver').style.display=(m==='driver')?'flex':'none';
+    document.getElementById('barClerk').style.display=(m==='clerk')?'flex':'none';
+    document.getElementById('hintDriver').style.display=(m==='driver')?'block':'none';
+    document.getElementById('hintClerk').style.display=(m==='clerk')?'block':'none';
+    if(m==='clerk'){ document.body.classList.add('locked'); }
+    else{ document.body.classList.remove('locked'); try{ apply(JSON.parse(localStorage.getItem(KEY))); }catch(e){} }
+  }
+  // เปิดโหมดตาม URL: index.html?role=clerk
+  if(new URLSearchParams(location.search).get('role')==='clerk') setMode('clerk');
+</script>
+</body>
+</html>
