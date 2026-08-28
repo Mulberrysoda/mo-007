@@ -38,6 +38,21 @@
   .modes button{background:transparent;padding:6px 12px;font-size:13px;opacity:.7;}
   .modes button.active{background:#2563eb;opacity:1;}
 
+  /* ตัวครอบกระดาษ (ใช้ย่อฟอร์มให้พอดีจอมือถือ) */
+  #sheetWrap{width:100%;}
+
+  /* ================= จอเล็ก / มือถือ ================= */
+  @media (max-width:640px){
+    .toolbar{padding:8px 10px;gap:6px;}
+    .toolbar h1{font-size:13px;width:100%;text-align:center;margin:0;}
+    .modes{width:100%;}
+    .modes button{flex:1;text-align:center;padding:8px 4px;font-size:12.5px;}
+    #barDriver, #barClerk{flex-wrap:wrap;gap:6px !important;width:100%;}
+    #barDriver button, #barClerk button{flex:1 1 28%;padding:9px 4px;font-size:12px;min-width:0;line-height:1.15;}
+    #reportSelect, #draftSelect{flex:1 1 100%;font-size:12.5px;}
+    .hint{font-size:11px;padding:0 10px 6px;line-height:1.4;}
+  }
+
   /* ================= กระดาษ A4 ================= */
   /* ขอบที่ปริ๊นเตอร์ส่วนใหญ่พิมพ์ไม่ได้ ≈ 4–6 มม. → ใช้ขอบพิมพ์ 7 มม. เพื่อความปลอดภัย
      พื้นที่พิมพ์จริง = 210 - 2*7 = 196 มม. ฟอร์มจะกว้างเต็มพื้นที่นี้ */
@@ -122,7 +137,9 @@
   @media print{
     html,body{background:#fff;}
     .toolbar,#status{display:none !important;}
-    .sheet{width:auto;min-height:auto;margin:0;padding:0 0 8mm;border:none;box-shadow:none;}
+    #sheetWrap{height:auto !important;overflow:visible !important;width:auto !important;}
+    .sheet{width:auto;min-height:auto;margin:0 !important;padding:0 0 8mm;border:none;box-shadow:none;
+      transform:none !important;}
     .doc-ctrl{position:fixed;right:0;bottom:2mm;}
     input,textarea{color:#000 !important;}
     input:focus,textarea:focus{background:transparent !important;}
@@ -165,6 +182,7 @@
   <div class="hint" id="hintClerk" style="display:none;">กด “โหลดรายการ” → เลือกรายงานที่ต้องการ → กด “พิมพ์” (ตั้งกระดาษ A4 แนวตั้ง)</div>
 </div>
 
+<div id="sheetWrap">
 <div class="sheet" id="sheet">
   <div class="doc-header">
     <img src="logo.png" alt="Italian-Thai Development - J.2411 Mae Moh Mine Phase 9">
@@ -278,6 +296,7 @@
 
   <div class="doc-ctrl">ITD-BU10-J2411-MO-FO-007 V.03</div>
 </div>
+</div><!-- /sheetWrap -->
 
 <div id="status"></div>
 
@@ -297,6 +316,28 @@
     return currentId;
   }
   function resetId(){ currentId=null; localStorage.removeItem(ID_KEY); }
+
+  /* ---------- ย่อฟอร์มให้พอดีความกว้างจอ (มือถือ/แท็บเล็ต) ---------- */
+  let currentScale=1;
+  function fitSheet(){
+    const wrap=document.getElementById('sheetWrap');
+    const s=document.getElementById('sheet');
+    if(!wrap||!s) return;
+    s.style.transform='none'; wrap.style.height='auto'; wrap.style.overflow='';
+    const natW=s.offsetWidth||794;
+    const avail=document.documentElement.clientWidth||window.innerWidth;
+    const scale=Math.min(1,(avail-8)/natW);
+    currentScale=scale;
+    if(scale<1){
+      s.style.transformOrigin='top left';
+      s.style.transform='scale('+scale+')';
+      s.style.marginLeft=Math.max(0,(avail-natW*scale)/2)+'px';
+      wrap.style.height=(s.offsetHeight*scale)+'px';
+      wrap.style.overflow='hidden';
+    }else{
+      s.style.marginLeft='';
+    }
+  }
 
   /* ---------- สร้างแถวตารางบันทึกการทำงาน 12 ชั่วโมง ---------- */
   const dayTimes=["06.00 - 07.00","07.00 - 08.00","08.00 - 09.00","09.00 - 10.00","10.00 - 11.00","11.00 - 12.00","12.00 - 13.00","13.00 - 14.00","14.00 - 15.00","15.00 - 16.00","16.00 - 17.00","17.00 - 18.00"];
@@ -323,7 +364,8 @@
     sctx.lineWidth=2; sctx.lineCap='round'; sctx.lineJoin='round'; sctx.strokeStyle='#0b2ea8';
     if(keep) sigDraw(keep);
   }
-  function sigPos(e){const r=sigCanvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
+  function sigPos(e){const r=sigCanvas.getBoundingClientRect();
+    return {x:(e.clientX-r.left)/currentScale, y:(e.clientY-r.top)/currentScale};}
   sigCanvas.addEventListener('pointerdown',e=>{sdraw=true;slast=sigPos(e);sigCanvas.setPointerCapture(e.pointerId);e.preventDefault();});
   sigCanvas.addEventListener('pointermove',e=>{if(!sdraw)return;const p=sigPos(e);
     sctx.beginPath();sctx.moveTo(slast.x,slast.y);sctx.lineTo(p.x,p.y);sctx.stroke();slast=p;e.preventDefault();});
@@ -336,7 +378,9 @@
       sctx.drawImage(img,0,0,sigCanvas.clientWidth,sigCanvas.clientHeight);};img.src=dataUrl;}
   function sigLoad(d){ sigHidden.value=d||''; if(d){sigDraw(d);} else {sctx.clearRect(0,0,sigCanvas.width,sigCanvas.height);} }
   function clearSig(){ sctx.clearRect(0,0,sigCanvas.width,sigCanvas.height); sigHidden.value=''; saveDraft(); }
-  window.addEventListener('resize',()=>setTimeout(sigResize,50));
+  window.addEventListener('resize',()=>{ fitSheet(); setTimeout(sigResize,50); });
+  window.addEventListener('load', fitSheet);
+  setTimeout(fitSheet,0);
   setTimeout(sigResize,0);
 
   /* ---------- คำนวณ "ใช้งาน" = เลิกงาน − เริ่มงาน ---------- */
@@ -471,7 +515,7 @@
       sel.innerHTML='<option value="">— เลือกร่าง ('+drafts.length+' รายการ) —</option>';
       drafts.forEach((r,i)=>{
         const d=r.data||{};
-        const label=(d.date||'-')+' | เครื่อง '+(d.mc_no||'-')+' | ผู้ขับ '+(d.drv_id||'-')+' | '+(d.shift||'');
+        const label=(d.date||'-')+' | เครื่อง '+(d.mc_code||d.mc_no||'-')+' | ผู้ขับ '+(d.drv_id||'-')+' | '+(d.shift||'');
         sel.insertAdjacentHTML('beforeend','<option value="'+i+'">'+label+'</option>');
       });
       flash('พบร่าง '+drafts.length+' รายการ เลือกเพื่อแก้ต่อ','#059669');
@@ -498,7 +542,7 @@
       sel.innerHTML='<option value="">— เลือกรายงาน ('+records.length+' รายการ) —</option>';
       records.forEach((r,i)=>{
         const d=r.data||{};
-        const label=(d.date||'-')+' | เครื่อง '+(d.mc_no||'-')+' | ผู้ขับ '+(d.drv_id||'-')+' | '+(d.shift||'');
+        const label=(d.date||'-')+' | เครื่อง '+(d.mc_code||d.mc_no||'-')+' | ผู้ขับ '+(d.drv_id||'-')+' | '+(d.shift||'');
         sel.insertAdjacentHTML('beforeend','<option value="'+i+'">'+label+'</option>');
       });
       flash('โหลดแล้ว '+records.length+' รายการ','#059669');
