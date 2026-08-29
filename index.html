@@ -106,7 +106,8 @@
   .fuel th{font-size:12px;font-weight:600;padding:2px;}
   .fuel td{height:23px;}
 
-  .sign{display:grid;grid-template-columns:1fr 1fr;gap:8px 26px;margin-top:16px;font-size:13px;}
+  .sign{display:grid;grid-template-columns:1fr 1fr;gap:8px 26px;margin-top:16px;font-size:13px;
+    page-break-inside:avoid;break-inside:avoid;}
   .sign .row{display:flex;align-items:flex-end;gap:6px;}
   .sign .row span{white-space:nowrap;}
   .sign .row .ln{flex:1;border-bottom:1px dotted #000;min-height:19px;}
@@ -139,12 +140,13 @@
     padding:11px 22px;border-radius:8px;color:#fff;font-size:14px;box-shadow:0 3px 12px rgba(0,0,0,.3);display:none;}
 
   /* ================= โหมดพิมพ์ ================= */
-  @page{size:A4 portrait;margin:7mm;}
+  /* ขอบซ้าย-ขวา 10มม. กันด้านขวาตกขอบ, บน-ล่าง 8มม. ให้พอดี 1 หน้า */
+  @page{size:A4 portrait;margin:8mm 10mm;}
   @media print{
     html,body{background:#fff;}
     .toolbar,#status{display:none !important;}
     #sheetWrap{height:auto !important;overflow:visible !important;width:auto !important;}
-    .sheet{width:auto;min-height:auto;margin:0 !important;padding:0 0 8mm;border:none;box-shadow:none;
+    .sheet{width:auto;min-height:auto;margin:0 !important;padding:0 0 6mm;border:none;box-shadow:none;
       transform:none !important;}
     .doc-ctrl{position:fixed;right:0;bottom:2mm;}
     input,textarea,select{color:#000 !important;}
@@ -338,7 +340,7 @@
       s.style.transformOrigin='top left';
       s.style.transform='scale('+scale+')';
       s.style.marginLeft=Math.max(0,(avail-natW*scale)/2)+'px';
-      wrap.style.height=(s.offsetHeight*scale)+'px';
+      wrap.style.height=(s.offsetHeight*scale+6)+'px'; // +6 กันตัดตอนเนื้อหาสูงขึ้นเล็กน้อย
       wrap.style.overflow='hidden';
     }else{
       s.style.marginLeft='';
@@ -391,6 +393,9 @@
   window.addEventListener('resize',()=>{ fitSheet(); setTimeout(sigResize,50); });
   window.addEventListener('load', fitSheet);
   setTimeout(fitSheet,0);
+  // คำนวณความสูงใหม่เมื่อฟอนต์โหลดเสร็จ/เนื้อหาเปลี่ยน (กันตารางล่างถูกตัดหาย)
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitSheet);
+  if(window.ResizeObserver){ new ResizeObserver(()=>fitSheet()).observe(document.getElementById('sheet')); }
   setTimeout(sigResize,0);
 
   /* ---------- คำนวณ "ใช้งาน" = เลิกงาน − เริ่มงาน ---------- */
